@@ -4,7 +4,7 @@ import sys
 import argparse
 
 from subprocess import call
-from PyQt5.QtWidgets import (QApplication, QMenu, QPushButton, QLineEdit, QWidget, QMessageBox, QDesktopWidget, QMainWindow, QAction, QLabel, QGridLayout, qApp) 
+from PyQt5.QtWidgets import (QApplication, QMenu, QPushButton, QCheckBox, QLineEdit, QWidget, QMessageBox, QDesktopWidget, QMainWindow, QAction, QLabel, QGridLayout, qApp) 
 from PyQt5.QtCore import Qt, pyqtSignal, QRegExp
 from PyQt5.QtGui import QIcon, QFont, QValidator, QRegExpValidator
 
@@ -13,9 +13,9 @@ class App(QWidget):
     def __init__(self, args=None):
         super().__init__()
         self.title = "Test Bed"
-        self.cmd_call = "${{SPARK_HOME}}/bin/spark-submit \
+        self.cmd_call_train = "${{SPARK_HOME}}/bin/spark-submit \
             --master ${{MASTER}} \
-            --py-files ${{TFoS_HOME}}/examples/mnist/spark/mnist_dist.py \
+            --py-files ${{TFoS_HOME}}{SOURCE_FILES} \
             --conf spark.cores.max={TOTAL_CORES} \
             --conf spark.task.cpus={CORES_PER_WORKER} \
             --conf spark.executor.memory={MEMORY} \
@@ -27,6 +27,23 @@ class App(QWidget):
             --format csv \
             --mode train \
             --model mnist_model"
+
+        self.cmd_call_inference = "${{SPARK_HOME}}/bin/spark-submit \
+            --master ${{MASTER}} \
+            --py-files ${{TFoS_HOME}}{SOURCE_FILES} \
+            --conf spark.cores.max={TOTAL_CORES} \
+            --conf spark.task.cpus={CORES_PER_WORKER} \
+            --conf spark.executor.memory={MEMORY} \
+            --conf spark.executorEnv.JAVA_HOME=\"$JAVA_HOME\" \
+            ${{TFoS_HOME}}/examples/mnist/spark/mnist_spark.py \
+            --cluster_size ${SPARK_WORKER_INSTANCES} \
+            --images {IMAGES}  \
+            --labels {LABELS} \
+            --format csv \
+            --mode inference \
+            --model mnist_model \
+            --output predictions"
+
         self.init_ui()
 
     def init_ui(self):
@@ -42,7 +59,7 @@ class App(QWidget):
         self.num_workers = QLabel('Workers:')
         self.num_cores = QLabel('Cores:')
         self.mem = QLabel('Memory per worker:')
-        self.tf_path = QLabel('Path to program:')
+        self.tf_path = QLabel('Path to source files:')
         self.data_path = QLabel('Path to data:')
 
         self.worker_edit = QLineEdit()
@@ -80,12 +97,15 @@ class App(QWidget):
         submit_btn = QPushButton("Submit", self)
         submit_btn.clicked.connect(self.submit_job)
 
-        layout.addWidget(submit_btn, 5, 0, Qt.AlignHCenter)
+        self.inference_btn = QCheckBox("Inference Mode", self)
 
-        layout.addLayout(grid_top, 2, 1)
+        layout.addWidget(submit_btn, 5, 0, Qt.AlignHCenter)
+        layout.addWidget(self.inference_btn, 5, 1, Qt.AlignHCenter)
+
+        layout.addLayout(grid_top, 2, 1, 1, 2, Qt.AlignHCenter)
         self.setLayout(layout)
                
-        self.resize(1000, 700)
+        self.resize(200, 100)
         self.center()
         self.setWindowTitle(self.title)
         self.show()
@@ -102,32 +122,28 @@ class App(QWidget):
         if e.key() == Qt.Key_Escape:
             self.close()
 
-    def check_state(self, *args, **kwargs):
-        sender = self.sender()
-        validator = sender.validator()
-        state = validator.validate(sender.text(), 0)[0]
-        
-        if state is not QValidator.Acceptable:  # and state is not QValidator.Intermediate:
-            color = '#f6989d' # red
-        sender.setStyleSheet('QLineEdit { background-color: {0}}'.format(color))
-
     def submit_job(self, *args, **kwargs):
-        # examples/mnist/csv/train/
-        images = self.data_edit.text() + "images/"
-        labels = self.data_edit.text() + "labels/"
-        self.cmd_call.format(
-                SPARK_WORKER_INSTANCES=self.worker_edit.text(), 
-                MEMORY=self.mem_edit.text(), 
-                CORES_PER_WORKER=self.core_edit.text(),
-                IMAGES=images,
-                LABELS=labels
-                )
-        print(self.cmd_call)
-        if "rm" not in self.cmd_call:
-            print(self.cmd_call)
-            # call(self.cmd_call)
+        images = self.data_edit.text() + "images"
+        labels = self.data_edit.text() + "labels"
+        memory = self.mem_edit.text()
+
+        if self.inference_btn.isChecked():
+            self.cmd_call = self.cmd_call_inference
         else:
-            print("Please don't remove anything")
+            self.cmd_call = self.cmd_call_train 
+
+        self.cmd_call.format(
+                    SOURCE_FILES=self.tf_edit.text(),
+                    TOTAL_CORES=int(self.core_edit.text()) * int(self.worker_edit.text()),
+                    SPARK_WORKER_INSTANCES=self.worker_edit.text(), 
+                    MEMORY=memory,
+                    CORES_PER_WORKER=self.core_edit.text(),
+                    IMAGES=images,
+                    LABELS=labels
+                    )
+
+        print(self.cmd_call)
+        call(self.cmd_call)
         
         print("Number of Workers: {}\nNumber of CPU's/Worker: {}\nTensorFlow path: {}\nData path: {}"
             .format(self.worker_edit.text(), self.core_edit.text(), self.tf_edit.text(), self.data_edit.text()))
