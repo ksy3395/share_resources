@@ -12,85 +12,82 @@ class App(QWidget):
 
     def __init__(self, args=None):
         super().__init__()
-        
+        self.title = "Test Bed"
         self.cmd_call = "${{SPARK_HOME}}/bin/spark-submit \
             --master ${{MASTER}} \
             --py-files ${{TFoS_HOME}}/examples/mnist/spark/mnist_dist.py \
-            --conf spark.cores.max=${TOTAL_CORES} \
-            --conf spark.task.cpus=${CORES_PER_WORKER} \
+            --conf spark.cores.max={TOTAL_CORES} \
+            --conf spark.task.cpus={CORES_PER_WORKER} \
+            --conf spark.executor.memory={MEMORY} \
             --conf spark.executorEnv.JAVA_HOME=\"$JAVA_HOME\" \
             ${{TFoS_HOME}}/examples/mnist/spark/mnist_spark.py \
             --cluster_size ${SPARK_WORKER_INSTANCES} \
-            --images examples/mnist/csv/train/images \
-            --labels examples/mnist/csv/train/labels \
+            --images {IMAGES}  \
+            --labels {LABELS} \
             --format csv \
             --mode train \
             --model mnist_model"
         self.init_ui()
 
     def init_ui(self):
-        # exitAct = QAction(QIcon('exit.png'), ' Exit', self)
         exitAct = QAction(' Exit', self)
         exitAct.setShortcut('Cmd+Q')
         exitAct.triggered.connect(qApp.quit)
 
         #self.statusBar()
 
-        #menubar = self.menuBar()
-        #filemenu = menubar.addMenu('File')
-       
+        self.title_bar = QLabel(self.title)
+        self.title_bar.setFont(QFont("Times", weight=QFont.Bold))
+
         self.num_workers = QLabel('Workers:')
         self.num_cores = QLabel('Cores:')
         self.mem = QLabel('Memory per worker:')
-        self.tf_path = QLabel('Path to TensorFlow:')
+        self.tf_path = QLabel('Path to program:')
         self.data_path = QLabel('Path to data:')
 
         self.worker_edit = QLineEdit()
-        self.worker_edit.setMaximumWidth(30)
+        self.worker_edit.setMaximumWidth(40)
 
         self.core_edit = QLineEdit()
-        self.core_edit.setMaximumWidth(30)
+        self.core_edit.setMaximumWidth(40)
 
         self.mem_edit = QLineEdit()
-        self.mem_edit.setMaximumWidth(30)
+        self.mem_edit.setMaximumWidth(40)
 
         self.tf_edit = QLineEdit()
         self.data_edit = QLineEdit()
 
-        # regexp = QRegExp('^(\d\d?)$')
-        # validator = QRegExpValidator(regexp)
-        # worker_edit.setValidator(validator)
-
-        # self.worker_edit.editingFinished.connect(self.check_state)
-        # worker_edit.editingFinished.connect(lambda x: print(x))
-        # worker_edit.editingFinished.emit(worker_edit.text())
-
-        grid = QGridLayout()
-
-        grid.addWidget(self.num_workers, 1, 0)
-        grid.addWidget(self.worker_edit, 1, 1)
-
-        grid.addWidget(self.num_cores, 2, 0)
-        grid.addWidget(self.core_edit, 2, 1)
-
-        grid.addWidget(self.mem, 3, 0)
-        grid.addWidget(self.mem_edit, 3, 1)
+        layout = QGridLayout()
+        grid_top = QGridLayout()
         
-        grid.addWidget(self.tf_path, 4, 0)
-        grid.addWidget(self.tf_edit, 4, 1)
+        layout.addWidget(self.title_bar, 1, 0, Qt.AlignLeft)
+
+        grid_top.addWidget(self.num_workers, 1, 0, Qt.AlignRight)
+        grid_top.addWidget(self.worker_edit, 1, 1, Qt.AlignLeft)
+
+        grid_top.addWidget(self.num_cores, 1, 2, Qt.AlignRight)
+        grid_top.addWidget(self.core_edit, 1, 3, Qt.AlignLeft)
+
+        grid_top.addWidget(self.mem, 1, 4, Qt.AlignRight)
+        grid_top.addWidget(self.mem_edit, 1, 5, Qt.AlignLeft)
         
-        grid.addWidget(self.data_path, 5, 0)
-        grid.addWidget(self.data_edit, 5, 1)
+        layout.addWidget(self.tf_path, 3, 0)
+        layout.addWidget(self.tf_edit, 3, 1)
+        
+        layout.addWidget(self.data_path, 4, 0)
+        layout.addWidget(self.data_edit, 4, 1)
 
         submit_btn = QPushButton("Submit", self)
         submit_btn.clicked.connect(self.submit_job)
 
-        grid.addWidget(submit_btn, 6, 0)
-        self.setLayout(grid)
+        layout.addWidget(submit_btn, 5, 0, Qt.AlignHCenter)
+
+        layout.addLayout(grid_top, 2, 1)
+        self.setLayout(layout)
                
         self.resize(1000, 700)
         self.center()
-        self.setWindowTitle('Test Bed')    
+        self.setWindowTitle(self.title)
         self.show()
 
     def center(self):
@@ -105,19 +102,6 @@ class App(QWidget):
         if e.key() == Qt.Key_Escape:
             self.close()
 
-
-    def contextMenuEvent(self, event):
-        cmenu = QMenu(self)
-                   
-        # newAct = cmenu.addAction("New")
-        quitAct = cmenu.addAction("Quit")
-        cmenu.setFixedWidth(100)
-        cmenu.setFixedWidth(200)
-        action = cmenu.exec_(self.mapToGlobal(event.pos()))
-           
-        if action == quitAct:
-            qApp.quit()
-
     def check_state(self, *args, **kwargs):
         sender = self.sender()
         validator = sender.validator()
@@ -125,12 +109,19 @@ class App(QWidget):
         
         if state is not QValidator.Acceptable:  # and state is not QValidator.Intermediate:
             color = '#f6989d' # red
-        sender.setStyleSheet('QLineEdit { background-color: %s }' % color)
+        sender.setStyleSheet('QLineEdit { background-color: {0}}'.format(color))
 
     def submit_job(self, *args, **kwargs):
-        print("Check1: ", *args, **kwargs)
-        # args = [self.worker_edit.text(), self.core_edit.text(), self.tf_edit.text(), self.data_edit.text()]
-        self.cmd_call.format(SPARK_WORKER_INSTANCES=self.worker_edit.text(), TOTAL_CORES=self.mem_edit.text(), CORES_PER_WORKER=self.core_edit.text())
+        # examples/mnist/csv/train/
+        images = self.data_edit.text() + "images/"
+        labels = self.data_edit.text() + "labels/"
+        self.cmd_call.format(
+                SPARK_WORKER_INSTANCES=self.worker_edit.text(), 
+                MEMORY=self.mem_edit.text(), 
+                CORES_PER_WORKER=self.core_edit.text(),
+                IMAGES=images,
+                LABELS=labels
+                )
         print(self.cmd_call)
         if "rm" not in self.cmd_call:
             print(self.cmd_call)
