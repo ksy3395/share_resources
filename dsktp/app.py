@@ -1,9 +1,10 @@
 #!/usr/bin/python3.6
 
 import sys
-import argparse
+import shlex
+import os
 
-from subprocess import call
+from subprocess import call, Popen
 from PyQt5.QtWidgets import (QApplication, QMenu, QPushButton, QCheckBox, QLineEdit, QWidget, QMessageBox, QDesktopWidget, QMainWindow, QAction, QLabel, QGridLayout, qApp) 
 from PyQt5.QtCore import Qt, pyqtSignal, QRegExp
 from PyQt5.QtGui import QIcon, QFont, QValidator, QRegExpValidator
@@ -13,30 +14,30 @@ class App(QWidget):
     def __init__(self, args=None):
         super().__init__()
         self.title = "Test Bed"
-        self.cmd_call_train = "${{SPARK_HOME}}/bin/spark-submit \
-            --master ${{MASTER}} \
-            --py-files ${{TFoS_HOME}}{SOURCE_FILES} \
+        self.cmd_call_train = r"$SPARK_HOME/bin/spark-submit \
+            --master $MASTER \
+            --py-files $TFoS_HOME{SOURCE_FILES} \
             --conf spark.cores.max={TOTAL_CORES} \
             --conf spark.task.cpus={CORES_PER_WORKER} \
             --conf spark.executor.memory={MEMORY} \
             --conf spark.executorEnv.JAVA_HOME=\"$JAVA_HOME\" \
-            ${{TFoS_HOME}}/examples/mnist/spark/mnist_spark.py \
-            --cluster_size ${SPARK_WORKER_INSTANCES} \
+            $TFoS_HOME/examples/mnist/spark/mnist_spark.py \
+            --cluster_size={SPARK_WORKER_INSTANCES} \
             --images {IMAGES}  \
             --labels {LABELS} \
             --format csv \
             --mode train \
             --model mnist_model"
 
-        self.cmd_call_inference = "${{SPARK_HOME}}/bin/spark-submit \
-            --master ${{MASTER}} \
-            --py-files ${{TFoS_HOME}}{SOURCE_FILES} \
+        self.cmd_call_inference = r"$SPARK_HOME/bin/spark-submit \
+            --master $MASTER \
+            --py-files $TFoS_HOME{SOURCE_FILES} \
             --conf spark.cores.max={TOTAL_CORES} \
             --conf spark.task.cpus={CORES_PER_WORKER} \
             --conf spark.executor.memory={MEMORY} \
             --conf spark.executorEnv.JAVA_HOME=\"$JAVA_HOME\" \
-            ${{TFoS_HOME}}/examples/mnist/spark/mnist_spark.py \
-            --cluster_size ${SPARK_WORKER_INSTANCES} \
+            $TFoS_HOME/examples/mnist/spark/mnist_spark.py \
+            --cluster_size={SPARK_WORKER_INSTANCES} \
             --images {IMAGES}  \
             --labels {LABELS} \
             --format csv \
@@ -128,11 +129,11 @@ class App(QWidget):
         memory = self.mem_edit.text()
 
         if self.inference_btn.isChecked():
-            self.cmd_call = self.cmd_call_inference
+            cmd_call = self.cmd_call_inference
         else:
-            self.cmd_call = self.cmd_call_train 
+            cmd_call = self.cmd_call_train 
 
-        self.cmd_call.format(
+        cmd_call = cmd_call.format(
                     SOURCE_FILES=self.tf_edit.text(),
                     TOTAL_CORES=int(self.core_edit.text()) * int(self.worker_edit.text()),
                     SPARK_WORKER_INSTANCES=self.worker_edit.text(), 
@@ -141,9 +142,9 @@ class App(QWidget):
                     IMAGES=images,
                     LABELS=labels
                     )
-
-        print(self.cmd_call)
-        call(self.cmd_call)
+        args = shlex.split(cmd_call)
+        print(args)
+        os.system(cmd_call)
         
         print("Number of Workers: {}\nNumber of CPU's/Worker: {}\nTensorFlow path: {}\nData path: {}"
             .format(self.worker_edit.text(), self.core_edit.text(), self.tf_edit.text(), self.data_edit.text()))
