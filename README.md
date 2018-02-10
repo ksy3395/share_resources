@@ -9,7 +9,7 @@
 ---
 
 ## Team Members:
-* [Susham Yerabolu](yerabolu@pdx.edu)
-* [Haritha Munagala](mharitha@pdx.edu)
-* [Soyoung Kim](soyoung@pdx.edu)
-* [Sam Gomena](gomenas@pdx.edu)
+* [Susham Yerabolu](mailto:yerabolu@pdx.edu)
+* [Haritha Munagala](mailto:mharitha@pdx.edu)
+* [Soyoung Kim](mailto:soyoung@pdx.edu)
+* [Sam Gomena](mailto:gomenas@pdx.edu)
