@@ -1,0 +1,411 @@
+#!/usr/bin/python3.6
+
+import sys
+import argparse
+
+from subprocess import call
+from PyQt5.QtWidgets import (QApplication, QMenu, QPushButton, QCheckBox, QLineEdit, QWidget, QMessageBox, QDesktopWidget, QMainWindow, QAction, QLabel, QGridLayout, qApp)
+from PyQt5.QtCore import Qt, pyqtSignal, QRegExp
+from PyQt5.QtGui import QIcon, QFont, QValidator, QRegExpValidator
+
+
+class App(QWidget):
+
+    def __init__(self, args=None):
+        super().__init__()
+        self.title = "Test Bed"
+        self.cmd_call_train = "${{SPARK_HOME}}/bin/spark-submit \
+            --master ${{MASTER}} \
+            --py-files ${{TFoS_HOME}}{SOURCE_FILES} \
+            --conf spark.cores.max={TOTAL_CORES} \
+            --conf spark.task.cpus={CORES_PER_WORKER} \
+            --conf spark.executor.memory={MEMORY} \
+            --conf spark.executorEnv.JAVA_HOME=\"$JAVA_HOME\" \
+            ${{TFoS_HOME}}/examples/mnist/spark/mnist_spark.py \
+            --cluster_size ${SPARK_WORKER_INSTANCES} \
+            --images {IMAGES}  \
+            --labels {LABELS} \
+            --format csv \
+            --mode train \
+            --model mnist_model"
+
+        self.cmd_call_inference = "${{SPARK_HOME}}/bin/spark-submit \
+            --master ${{MASTER}} \
+            --py-files ${{TFoS_HOME}}{SOURCE_FILES} \
+            --conf spark.cores.max={TOTAL_CORES} \
+            --conf spark.task.cpus={CORES_PER_WORKER} \
+            --conf spark.executor.memory={MEMORY} \
+            --conf spark.executorEnv.JAVA_HOME=\"$JAVA_HOME\" \
+            ${{TFoS_HOME}}/examples/mnist/spark/mnist_spark.py \
+            --cluster_size ${SPARK_WORKER_INSTANCES} \
+            --images {IMAGES}  \
+            --labels {LABELS} \
+            --format csv \
+            --mode inference \
+            --model mnist_model \
+            --output predictions"
+
+        self.init_ui()
+
+    def init_ui(self):
+        exitAct = QAction(' Exit', self)
+        exitAct.setShortcut('Cmd+Q')
+        exitAct.triggered.connect(qApp.quit)
+
+        # self.statusBar()
+
+        self.title_bar = QLabel(self.title)
+        self.title_bar.setFont(QFont("Times", weight=QFont.Bold))
+
+        self.num_workers = QLabel('Workers:')
+        self.num_cores = QLabel('Cores:')
+        self.mem = QLabel('Memory per worker:')
+        self.tf_path = QLabel('Path to source files:')
+        self.data_path = QLabel('Path to data:')
+
+        self.worker_edit = QLineEdit()
+        self.worker_edit.setMaximumWidth(40)
+
+        self.core_edit = QLineEdit()
+        self.core_edit.setMaximumWidth(40)
+
+        self.mem_edit = QLineEdit()
+        self.mem_edit.setMaximumWidth(40)
+
+        self.tf_edit = QLineEdit()
+        self.data_edit = QLineEdit()
+
+        layout = QGridLayout()
+        grid_top = QGridLayout()
+
+        layout.addWidget(self.title_bar, 1, 0, Qt.AlignLeft)
+
+        grid_top.addWidget(self.num_workers, 1, 0, Qt.AlignRight)
+        grid_top.addWidget(self.worker_edit, 1, 1, Qt.AlignLeft)
+
+        grid_top.addWidget(self.num_cores, 1, 2, Qt.AlignRight)
+        grid_top.addWidget(self.core_edit, 1, 3, Qt.AlignLeft)
+
+        grid_top.addWidget(self.mem, 1, 4, Qt.AlignRight)
+        grid_top.addWidget(self.mem_edit, 1, 5, Qt.AlignLeft)
+
+        layout.addWidget(self.tf_path, 3, 0)
+        layout.addWidget(self.tf_edit, 3, 1)
+
+        layout.addWidget(self.data_path, 4, 0)
+        layout.addWidget(self.data_edit, 4, 1)
+
+        submit_btn = QPushButton("Submit", self)
+        submit_btn.clicked.connect(self.submit_job)
+
+        self.inference_btn = QCheckBox("Inference Mode", self)
+
+        layout.addWidget(submit_btn, 5, 0, Qt.AlignHCenter)
+        layout.addWidget(self.inference_btn, 5, 1, Qt.AlignHCenter)
+
+        layout.addLayout(grid_top, 2, 1, 1, 2, Qt.AlignHCenter)
+        self.setLayout(layout)
+
+        self.resize(200, 100)
+        self.center()
+        self.setWindowTitle(self.title)
+        self.show()
+
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+    def keyPressEvent(self, e):
+        print(e.key())
+
+        if e.key() == Qt.Key_Escape:
+            self.close()
+
+    def submit_job(self, *args, **kwargs):
+        images = self.data_edit.text() + "images"
+        labels = self.data_edit.text() + "labels"
+        memory = self.mem_edit.text()
+
+        if self.inference_btn.isChecked():
+            cmd_call = self.cmd_call_inference
+        else:
+            cmd_call = self.cmd_call_train
+
+        cmd_call.format(
+                    SOURCE_FILES=self.tf_edit.text(),
+                    TOTAL_CORES=int(self.core_edit.text()) * int(self.worker_edit.text()),
+                    SPARK_WORKER_INSTANCES=self.worker_edit.text(),
+                    MEMORY=memory,
+                    CORES_PER_WORKER=self.core_edit.text(),
+                    IMAGES=images,
+                    LABELS=labels
+                )
+
+        print(cmd_call)
+        call(cmd_call)
+
+        print("Number of Workers: {}\nNumber of CPU's/Worker: {}\nTensorFlow path: {}\nData path: {}"
+              .format(self.worker_edit.text(), self.core_edit.text(), self.tf_edit.text(), self.data_edit.text()))
+
+
+if __name__ == '__main__':
+    qapp = QApplication(sys.argv)
+    app = App()
+    sys.exit(qapp.exec_())
+
+
+#!/usr/bin/env python
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+
+        widget = QtWidgets.QWidget()
+        self.setCentralWidget(widget)
+
+        topFiller = QtWidgets.QWidget()
+        topFiller.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                QtWidgets.QSizePolicy.Expanding)
+
+        self.infoLabel = QtWidgets.QLabel(
+            "<i>Choose a menu option, or right-click to invoke a context menu</i>",
+            alignment=QtCore.Qt.AlignCenter)
+        self.infoLabel.setFrameStyle(QtWidgets.QFrame.StyledPanel | QtWidgets.QFrame.Sunken)
+
+        bottomFiller = QtWidgets.QWidget()
+        bottomFiller.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                   QtWidgets.QSizePolicy.Expanding)
+
+        vbox = QtWidgets.QVBoxLayout()
+        # vbox.setContentsMargin(5)
+        vbox.addWidget(topFiller)
+        vbox.addWidget(self.infoLabel)
+        vbox.addWidget(bottomFiller)
+        widget.setLayout(vbox)
+
+        self.createActions()
+        self.createMenus()
+
+        message = "A context menu is available by right-clicking"
+        self.statusBar().showMessage(message)
+
+        self.setWindowTitle("Menus")
+        self.setMinimumSize(160, 160)
+        self.resize(480, 320)
+
+    def contextMenuEvent(self, event):
+        menu = QtWidgets.QMenu(self)
+        menu.addAction(self.cutAct)
+        menu.addAction(self.copyAct)
+        menu.addAction(self.pasteAct)
+        menu.exec_(event.globalPos())
+
+    def newFile(self):
+        self.infoLabel.setText("Invoked <b>File|New</b>")
+
+    def open(self):
+        self.infoLabel.setText("Invoked <b>File|Open</b>")
+
+    def save(self):
+        self.infoLabel.setText("Invoked <b>File|Save</b>")
+
+    def print_(self):
+        self.infoLabel.setText("Invoked <b>File|Print</b>")
+
+    def undo(self):
+        self.infoLabel.setText("Invoked <b>Edit|Undo</b>")
+
+    def redo(self):
+        self.infoLabel.setText("Invoked <b>Edit|Redo</b>")
+
+    def cut(self):
+        self.infoLabel.setText("Invoked <b>Edit|Cut</b>")
+
+    def copy(self):
+        self.infoLabel.setText("Invoked <b>Edit|Copy</b>")
+
+    def paste(self):
+        self.infoLabel.setText("Invoked <b>Edit|Paste</b>")
+
+    def bold(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Bold</b>")
+
+    def italic(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Italic</b>")
+
+    def leftAlign(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Left Align</b>")
+
+    def rightAlign(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Right Align</b>")
+
+    def justify(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Justify</b>")
+
+    def center(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Center</b>")
+
+    def setLineSpacing(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Set Line Spacing</b>")
+
+    def setParagraphSpacing(self):
+        self.infoLabel.setText("Invoked <b>Edit|Format|Set Paragraph Spacing</b>")
+
+    def about(self):
+        self.infoLabel.setText("Invoked <b>Help|About</b>")
+        QtWidgets.QMessageBox.about(self, "About Menu",
+                                "The <b>Menu</b> example shows how to create menu-bar menus "
+                                "and context menus.")
+
+    def aboutQt(self):
+        self.infoLabel.setText("Invoked <b>Help|About Qt</b>")
+
+    def createActions(self):
+        self.newAct = QtWidgets.QAction("&New", self,
+                                    shortcut=QtGui.QKeySequence.New,
+                                    statusTip="Create a new file", triggered=self.newFile)
+
+        self.openAct = QtWidgets.QAction("&Open...", self,
+                                     shortcut=QtGui.QKeySequence.Open,
+                                     statusTip="Open an existing file", triggered=self.open)
+
+        self.saveAct = QtWidgets.QAction("&Save", self,
+                                     shortcut=QtGui.QKeySequence.Save,
+                                     statusTip="Save the document to disk", triggered=self.save)
+
+        self.printAct = QtWidgets.QAction("&Print...", self,
+                                      shortcut=QtGui.QKeySequence.Print,
+                                      statusTip="Print the document", triggered=self.print_)
+
+        self.exitAct = QtWidgets.QAction("E&xit", self, shortcut="Ctrl+Q",
+                                     statusTip="Exit the application", triggered=self.close)
+
+        self.undoAct = QtWidgets.QAction("&Undo", self,
+                                     shortcut=QtGui.QKeySequence.Undo,
+                                     statusTip="Undo the last operation", triggered=self.undo)
+
+        self.redoAct = QtWidgets.QAction("&Redo", self,
+                                     shortcut=QtGui.QKeySequence.Redo,
+                                     statusTip="Redo the last operation", triggered=self.redo)
+
+        self.cutAct = QtWidgets.QAction("Cu&t", self,
+                                    shortcut=QtGui.QKeySequence.Cut,
+                                    statusTip="Cut the current selection's contents to the clipboard",
+                                    triggered=self.cut)
+
+        self.copyAct = QtWidgets.QAction("&Copy", self,
+                                     shortcut=QtGui.QKeySequence.Copy,
+                                     statusTip="Copy the current selection's contents to the clipboard",
+                                     triggered=self.copy)
+
+        self.pasteAct = QtWidgets.QAction("&Paste", self,
+                                      shortcut=QtGui.QKeySequence.Paste,
+                                      statusTip="Paste the clipboard's contents into the current selection",
+                                      triggered=self.paste)
+
+        self.boldAct = QtWidgets.QAction("&Bold", self, checkable=True,
+                                     shortcut="Ctrl+B", statusTip="Make the text bold",
+                                     triggered=self.bold)
+
+        boldFont = self.boldAct.font()
+        boldFont.setBold(True)
+        self.boldAct.setFont(boldFont)
+
+        self.italicAct = QtWidgets.QAction("&Italic", self, checkable=True,
+                                       shortcut="Ctrl+I", statusTip="Make the text italic",
+                                       triggered=self.italic)
+
+        italicFont = self.italicAct.font()
+        italicFont.setItalic(True)
+        self.italicAct.setFont(italicFont)
+
+        self.setLineSpacingAct = QtWidgets.QAction("Set &Line Spacing...", self,
+                                               statusTip="Change the gap between the lines of a paragraph",
+                                               triggered=self.setLineSpacing)
+
+        self.setParagraphSpacingAct = QtWidgets.QAction(
+            "Set &Paragraph Spacing...", self,
+            statusTip="Change the gap between paragraphs",
+            triggered=self.setParagraphSpacing)
+
+        self.aboutAct = QtWidgets.QAction("&About", self,
+                                      statusTip="Show the application's About box",
+                                      triggered=self.about)
+
+        self.aboutQtAct = QtWidgets.QAction("About &Qt", self,
+                                        statusTip="Show the Qt library's About box",
+                                        triggered=self.aboutQt)
+        self.aboutQtAct.triggered.connect(QtWidgets.qApp.aboutQt)
+
+        self.leftAlignAct = QtWidgets.QAction("&Left Align", self, checkable=True,
+                                          shortcut="Ctrl+L", statusTip="Left align the selected text",
+                                          triggered=self.leftAlign)
+
+        self.rightAlignAct = QtWidgets.QAction("&Right Align", self,
+                                           checkable=True, shortcut="Ctrl+R",
+                                           statusTip="Right align the selected text",
+                                           triggered=self.rightAlign)
+
+        self.justifyAct = QtWidgets.QAction("&Justify", self, checkable=True,
+                                        shortcut="Ctrl+J", statusTip="Justify the selected text",
+                                        triggered=self.justify)
+
+        self.centerAct = QtWidgets.QAction("&Center", self, checkable=True,
+                                       shortcut="Ctrl+C", statusTip="Center the selected text",
+                                       triggered=self.center)
+
+        self.alignmentGroup = QtWidgets.QActionGroup(self)
+        self.alignmentGroup.addAction(self.leftAlignAct)
+        self.alignmentGroup.addAction(self.rightAlignAct)
+        self.alignmentGroup.addAction(self.justifyAct)
+        self.alignmentGroup.addAction(self.centerAct)
+        self.leftAlignAct.setChecked(True)
+
+    def createMenus(self):
+        self.fileMenu = self.menuBar().addMenu("&File")
+        self.fileMenu.addAction(self.newAct)
+        self.fileMenu.addAction(self.openAct)
+        self.fileMenu.addAction(self.saveAct)
+        self.fileMenu.addAction(self.printAct)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.exitAct)
+
+        self.editMenu = self.menuBar().addMenu("&Edit")
+        self.editMenu.addAction(self.undoAct)
+        self.editMenu.addAction(self.redoAct)
+        self.editMenu.addSeparator()
+        self.editMenu.addAction(self.cutAct)
+        self.editMenu.addAction(self.copyAct)
+        self.editMenu.addAction(self.pasteAct)
+        self.editMenu.addSeparator()
+
+        self.helpMenu = self.menuBar().addMenu("&Help")
+        self.helpMenu.addAction(self.aboutAct)
+        self.helpMenu.addAction(self.aboutQtAct)
+
+        self.formatMenu = self.editMenu.addMenu("&Format")
+        self.formatMenu.addAction(self.boldAct)
+        self.formatMenu.addAction(self.italicAct)
+        self.formatMenu.addSeparator().setText("Alignment")
+        self.formatMenu.addAction(self.leftAlignAct)
+        self.formatMenu.addAction(self.rightAlignAct)
+        self.formatMenu.addAction(self.justifyAct)
+        self.formatMenu.addAction(self.centerAct)
+        self.formatMenu.addSeparator()
+        self.formatMenu.addAction(self.setLineSpacingAct)
+        self.formatMenu.addAction(self.setParagraphSpacingAct)
+
+
+if __name__ == '__main__':
+    import sys
+
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
