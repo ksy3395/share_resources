@@ -1,5 +1,60 @@
-__pycache__
+# This is a modified version of GitHub's template found here: https://github.com/github/gitignore/blob/master/Python.gitignore
 
-*.idea
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-*.DS_Store
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Sphinx documentation
+docs/_build/
+
+# pyenv
+.python-version
+
+
+# ----------- Other stuff -----------
+
+*.idea  # Config files for JetBrains IDE's
+
+*.DS_Store  # Directory info on mac
+
+**/untracked_content/extras*  # Scratch files and such
+
+
