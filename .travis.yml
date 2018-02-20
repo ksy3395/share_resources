@@ -9,8 +9,3 @@ install:
 # run scripts
 script:
    - make test
- # - coverage erase
- # - coverage run app.py && coverage html
-
-#after_success:
- # - codecov
