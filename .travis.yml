@@ -3,3 +3,5 @@ node_js:
     - "node"
 script:
     - make test
+services:
+  - mongodb
