@@ -4,21 +4,25 @@ from PyQt5.QtWidgets \
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
 
+from dsktp.dashboard import Dashboard
+from dsktp.resources import Resources
+from dsktp.jobs import Jobs
+
 
 class App(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.title = 'Share Resources'
+        self.title = "Share Resources"
         self.left = 100
         self.top = 100
-        self.width = 600
-        self.height = 400
+        self.width = 800
+        self.height = 480
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         self.center()
 
-        self.table_widget = Main(self)
+        self.table_widget = MainWindow(self)
         self.setCentralWidget(self.table_widget)
 
         self.show()
@@ -30,7 +34,7 @@ class App(QMainWindow):
         self.move(rect.topLeft())
 
 
-class Main(QWidget):
+class MainWindow(QWidget):
 
     def __init__(self, parent):
         super(QWidget, self).__init__(parent)
@@ -38,21 +42,15 @@ class Main(QWidget):
 
         # Initialize tab screen
         self.tabs = QTabWidget()
-        self.tab1 = QWidget()
-        self.tab2 = QWidget()
-        self.tab3 = QWidget()
-        self.tabs.resize(300, 200)
+        self.tab1 = Dashboard()  # Dashboard tab; contained in dashboard.py
+        self.tab2 = Resources()  # Resource tab; contained in resources.py
+        self.tab3 = Jobs()  # Jobs tab; contained in jobs.py
+        self.tabs.resize(640, 480)
 
         # Add tabs
         self.tabs.addTab(self.tab1, "Dashboard")
         self.tabs.addTab(self.tab2, "Resources")
         self.tabs.addTab(self.tab3, "Jobs")
-
-        # Create first tab
-        self.tab1.layout = QVBoxLayout(self)
-        self.pushButton1 = QPushButton("Submit")
-        self.tab1.layout.addWidget(self.pushButton1)
-        # self.tab1.setLayout(self.tab1.layout)
 
         # Add tabs to widget
         self.layout.addWidget(self.tabs)
