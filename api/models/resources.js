@@ -1,0 +1,6 @@
+/*
+
+This file contains the model of the Resources table
+Use this model to populate the Resources table
+
+*/
