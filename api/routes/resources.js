@@ -2,45 +2,22 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 //var Resources = require('../models/resources.js');
+var resources_controller = require('../controllers/resourcesController');
 
-/* GET ALL PRODUCTS */
-router.get('/', function(req, res, next) {
- // Product.find(function (err, products) {
-   // if (err) return next(err);
-  res.json("get all method called");
- // });
-});
 
-/* GET SINGLE PRODUCT BY ID */
-router.get('/:id', function(req, res, next) {
- // Product.findById(req.params.id, function (err, post) {
-  //  if (err) return next(err);
-  res.json("get resouce by Id called");
- // });
-});
+/* GET ALL RESOURCES */
+router.get('/',resources_controller.getallresources);
 
-/* SAVE PRODUCT */
-router.post('/', function(req, res, next) {
- // Product.create(req.body, function (err, post) {
- //   if (err) return next(err);
-   res.json(post);
- // });
-});
+/* GET ALL RESOURCES BY CUSTOMER_ID OR EMAIL_ID */
+router.get('/:id',resources_controller.getresourcesbycustomerId);
 
-/* UPDATE PRODUCT */
-router.put('/:id', function(req, res, next) {
- // Product.findByIdAndUpdate(req.params.id, req.body, function (err, post) {
- //   if (err) return next(err);
- //   res.json(post);
- // });
-});
+/* ADD NEW RESOURCES UNDER THE USER ACCOUNT */
+router.post('/', resources_controller.addresourcebycustomerId);
+
+/* UPDATE RESOURCE DETAILS */
+router.put('/:id',resources_controller.updateresourcebycustomerid);
 
 /* DELETE PRODUCT */
-router.delete('/:id', function(req, res, next) {
- // Product.findByIdAndRemove(req.params.id, req.body, function (err, post) {
- //   if (err) return next(err);
- //   res.json(post);
- // });
-});
+router.delete('/:id',resources_controller.deleteresourcebycustomerid);
 
 module.exports = router;
