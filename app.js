@@ -12,7 +12,7 @@ next();
 
 }
 app.use(logger);
-
+module.exports=app;
 //body parser middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:false}));
