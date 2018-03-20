@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var mongoose = require('mongoose');
 //var Resources = require('../models/resources.js');
-var resources_controller = require('../controllers/resourcesController');
+var resources_controller = require(config.CONTROLLERS_PATH+'resourcesController');
 
 
 /* GET ALL RESOURCES */

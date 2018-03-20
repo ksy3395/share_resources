@@ -1,4 +1,3 @@
-process.env.NODE_ENV = 'test';
 
 let mongoose = require("mongoose");
 let chai = require('chai');

@@ -1,4 +1,0 @@
-/*
-This Folder has the database config file and other config files
-
-*/
