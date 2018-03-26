@@ -1,5 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
+// Bring Mongoose into the app
+var mongoose = require( 'mongoose' );
 //var path= require('path');
 config = require('./api/config/config');
 var app= express();
@@ -13,6 +15,42 @@ console.log('Logging....');
 next();
 
 }
+
+
+
+mongoose.set('bufferCommands', false);
+
+// Build the connection string
+var dbURI = 'mongodb://localhost/ShareResources';
+
+// Create the database connection
+mongoose.connect(dbURI);
+mongoose.Promise = global.Promise;
+
+
+mongoose.connect(dbURI)
+  .then(() =>  console.log('connection succesful'))
+  .catch((err) => console.error(err));
+
+
+// When the connection is disconnected
+mongoose.connection.on('disconnected', function () {
+  console.log('Mongoose default connection disconnected');
+});
+
+// When the connection is open
+mongoose.connection.on('open', function () {
+  console.log('Mongoose default connection is open');
+});
+
+// If the Node process ends, close the Mongoose connection
+process.on('SIGINT', function() {
+  mongoose.connection.close(function () {
+    console.log('Mongoose default connection disconnected through app termination');
+    process.exit(0);
+  });
+});
+
 app.use(logger);
 module.exports=app;
 //body parser middleware

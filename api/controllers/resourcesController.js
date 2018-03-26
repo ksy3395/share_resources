@@ -7,9 +7,15 @@
  * @throws {PartyError|Hearty} Multiple types work fine.
  * @returns {Number} Types and descriptions are both supported.
  */
+
+var Resources = require('../models/resources'); 
 /* GET ALL RESOURCES */
 exports.getallresources = function(req, res) {
-    res.send('NOT IMPLEMENTED: Get All Resources');
+
+ Resources.find(function (err, resources) {
+    if (err) return next(err);
+    res.json(resources);
+  });
 };
 
 /* GET ALL RESOURCES BY CUSTOMER_ID OR EMAIL_ID */
@@ -19,7 +25,22 @@ exports.getresourcesbycustomerId = function(req, res) {
 
 /* ADD NEW RESOURCES UNDER THE USER ACCOUNT */
 exports.addresourcebycustomerId = function(req, res) {
-    res.send('NOT IMPLEMENTED: Book create GET');
+
+	//sample method call to add users to the database.
+
+var chris = new User({
+  name: 'Chris',
+  username: 'sevilayha',
+  password: 'password' 
+});
+
+chris.save(function(err) {
+  if (err) throw err;
+
+  console.log('User saved successfully!');
+});
+
+    res.send('User Saved successfully',200);
 };
 
 /* UPDATE RESOURCE DETAILS */
